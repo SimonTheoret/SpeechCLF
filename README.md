@@ -1,2 +1,2 @@
-# AiCLF
-Ai classifier.
+# Speech
+Hate and offensive language classifier.
