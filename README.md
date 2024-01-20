@@ -7,6 +7,6 @@ description can be found on huggingface:
 [hate_speech_offensive](https://huggingface.co/datasets/hate_speech_offensive).
 ## Note on preprocessing
 Normally, we should correct the tweets with some techniques such as edit distance or
-Jaccard index.
+Jaccard index. But, due 
 ## Data Augmentation
 

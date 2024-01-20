@@ -1,16 +1,17 @@
 import re
 from functools import partial
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Tuple
 
 import contextualSpellCheck
 import fire
 import nltk
+import numpy as np
 import pandas as pd
 import spacy
-from tqdm import tqdm
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+from tqdm import tqdm
 
 """
 initial data content:
@@ -125,16 +126,20 @@ def preprocess_text(
 
 
 def write_cleaned_data(
-    src: str = "data/labeled_data.csv", dest: str = "data/cleaned.csv"
+    src: str = "data/labeled_data.csv",
+    dest: str = "data/cleaned.csv",
+    corrector: Optional[Callable[[str], str]] = spellcheck_corrector,
 ):
-    """Cleans the datframe loaded at `src` and writes the cleaned  dataframe to disk
-    `dest`.
+    """Cleans the dataframe loaded at `src` and writes the cleaned dataframe to disk
+    `dest`. It keeps 
     Parameters:
     ----------
     src: str
         csv file to read from. Defaults to `data/labeled_data.csv`.
     dest: str
         csv file to write to. Defaults to `data/cleaned.csv`.
+    corrector: Optional[Callable[[str], str]]
+        Callable applied to the text
     """
     df = pd.read_csv(src, index_col=[0])
 
@@ -161,11 +166,26 @@ def write_cleaned_data(
     stopwords_english = stopwords.words("english")
 
     preprocess = partial(
-        preprocess_text, lemmatizer=lemmatizer, stopwords=stopwords_english
+        preprocess_text,
+        lemmatizer=lemmatizer,
+        stopwords=stopwords_english,
+        corrector=corrector,
     )
-    tqdm.pandas(desc="my bar!")
+    tqdm.pandas(desc="Preprocessing content")
 
-    df["tweet"] = df.progress_apply(preprocess, axis=1)
+    df["tweet"] = df.progress_apply(preprocess, axis=1)  # pyright: ignore
+    df = df.replace(to_replace="None", value=np.nan).dropna()  # remove None tweet
+    df.drop_duplicates(inplace=True)
+
+    def labeler(row: pd.Series):
+        max = row[
+            ["offensive_language_proba", "hate_speech_proba", "neither_proba"]
+        ].idxmax()
+        cols = ["offensive_language_proba", "hate_speech_proba", "neither_proba"]
+        return cols.index(str(max))
+
+    df["label"] = df.apply(labeler, axis=1)
+
     df.to_csv(dest)
     print(f"cleaned data written to {dest}")
 
@@ -181,6 +201,48 @@ def load_cleaned_data(src: str = "data/cleaned.csv"):
     """
     print(f"read data .csv file at {src}")
     return pd.read_csv(src, index_col=[0])
+
+
+def split_dataset(
+    src: str = "data/cleaned.csv",
+    train_size: float = 0.75,
+    valid_size: float = 0.125,
+    test_size: float = 0.125,
+    seed: int = 42,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Split the cleaned dataset in 3 dataframes. Returns (in this order) the training
+    dataframe of size `train_size`, the validation dataframe of size `valid_size` and
+    the testing dataframe of size `test_size`. This function uses internally
+    `load_cleaned_data(src)` the fetch the initial dataframe.
+
+    Parameters
+    ----------
+    src: str
+        csv file to read from. Defaults to `data/cleaned.csv`.
+    train_size: float
+        Relative size of the training set. Default to 0.75.
+    valid_size: float
+        Relative size of the validation set. Default to 0.125.
+    test_size: float
+        Relative size of the testing set. Default to 0.125.
+    seed: int
+        Fixes the random state. Defaults to 42.
+    """
+    df = load_cleaned_data(src)
+    df = df.replace(to_replace="None", value=np.nan).dropna()
+
+    # df.mask(df.eq("None")).dropna(inplace=True)  # eliminate "None" in tweet column
+    # df.mask(df.eq(None)).dropna(inplace=True)  # eliminate None in tweet column
+    train = df.sample(frac=train_size, random_state=seed)
+    df = df.drop(train.index)
+    df.dropna(inplace=True)
+    remaining = 1 - train_size
+    valid_size = valid_size / remaining
+    valid = df.sample(frac=valid_size, random_state=seed)
+    valid.dropna(inplace=True)
+    df = df.drop(valid.index)
+    test = df.dropna()
+    return train, valid, test
 
 
 if __name__ == "__main__":
