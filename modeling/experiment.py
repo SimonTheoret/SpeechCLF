@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Optional
 
+import fire
 from dotenv import load_dotenv
 
 import wandb
@@ -65,6 +66,7 @@ def init_exp(
     project: str = "SpeechCLF",
 ):
     """Initiate an experimentation on wandb.
+
     Parameters
     ----------
     hp: Hyperparameters
@@ -93,6 +95,7 @@ def init_exp(
 
 def log_results(metrics: dict[str, Any]):
     """Logs the results to wandb.
+
     Parameters
     ----------
     metrics: dict[str, Any]
@@ -100,3 +103,21 @@ def log_results(metrics: dict[str, Any]):
     """
     wandb.log(metrics)
     print("logged metrics: ", metrics)
+
+
+def log_artifact(path: str, name: str):
+    """Logs the model weights on wandb
+
+    Parameters
+    ----------
+    path: str
+        The path to the directory to upload to wandb
+    name: str
+        Name given to the model
+    """
+    run = wandb.init(project="SpeechCLF")
+    run.log_model(path=path, name=name)  # pyright: ignore
+
+
+if __name__ == "__main__":
+    fire.Fire(log_artifact)
