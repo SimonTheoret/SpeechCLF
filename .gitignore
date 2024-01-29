@@ -162,7 +162,7 @@ cython_debug/
 # Ignore data
 *.csv
 # Ignore reports
-*.html
+report.html
 
 # Ignore models
 models
