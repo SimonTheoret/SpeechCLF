@@ -28,7 +28,7 @@ def test_download_limited():
 
 
 def test_split_strings():
-    text = "this is a very long string without much content, with exactly 75 characters"
+    text = "this is a very long string without much content,with exactly 75 characters."
     assert len(text) == 75
     assert len(split_strings(text, 25)) == 3
     assert len(split_strings(text, 50)) == 2
