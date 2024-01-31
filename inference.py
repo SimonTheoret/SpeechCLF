@@ -28,7 +28,6 @@ def get_html_content(url: str, max_size: int, length: int) -> list[str]:
         str_content = download_limited(url, max_size)
     except Exception as e:
         raise e
-
     lemmatizer = WordNetLemmatizer()
     stopwords_english = stopwords.words("english")
     str_content = preprocess_str(str_content, lemmatizer, stopwords_english, None)
@@ -71,11 +70,11 @@ def split_strings(text: str, length: int) -> list[str]:
     "Split string into a list of string of specified length"
     text_len = len(text)
     splitted = [text[i : i + length] for i in range(0, text_len, length)]
-    if text_len % length != 0:  # if length does not divide the length of the text
-        remaining = text_len % length  # characters not in the splitted
-        splitted.append(
-            text[-remaining - 1 : -1]
-        )  # include -remaining-1 as it is not included in splitted
+    # if text_len % length != 0:  # if length does not divide the length of the text
+    #     remaining = text_len % length  # characters not in the splitted
+    #     splitted.append(
+    #         text[-remaining - 1 : -1]
+    #     )  # include -remaining-1 as it is not included in splitted
     return splitted
 
 
