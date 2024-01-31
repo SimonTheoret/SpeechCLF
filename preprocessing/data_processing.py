@@ -49,8 +49,8 @@ def nlp_pipeline_corrector(text: str, nlp=None) -> str:
 spellcheck_corrector = partial(nlp_pipeline_corrector, nlp=setup_nlp_pipeline())
 
 
-def preprocess_text(
-    row: pd.Series,
+def preprocess_str(
+    text: str,
     lemmatizer: WordNetLemmatizer,
     stopwords: list[str],
     corrector: Optional[Callable[[str], str]] = spellcheck_corrector,
@@ -70,8 +70,8 @@ def preprocess_text(
 
     Parameters
     ----------
-    row: pd.Series
-        The row in a dataframe to process
+    text: str
+        The string to process
     lemmatizer: WordNetLemmatizer
         The lemmatizer used to lemmatize
     stopwords: list[str]
@@ -79,9 +79,6 @@ def preprocess_text(
     corrector: Optional[Callable[[str], str]]
         Callable applied to the text
     """
-    text = row.tweet
-
-    # remove the part of the string before and containing the colon
     contains_colon = text.find(":")
 
     if contains_colon != -1:
@@ -115,12 +112,49 @@ def preprocess_text(
     # remove empty tokens and spaces:
     tokens = [token for token in tokens if token != "" and token != " "]
 
-    # join the tokens together, separated by spaces:
-    text = " ".join(tokens)
-
-    # apply correction to text
     if corrector is not None:
         text = corrector(text)
+
+    # join the tokens together, separated by spaces:
+    text = " ".join(tokens)
+    return text
+
+
+def preprocess_text(
+    row: pd.Series,
+    lemmatizer: WordNetLemmatizer,
+    stopwords: list[str],
+    corrector: Optional[Callable[[str], str]] = spellcheck_corrector,
+) -> str:
+    """
+    This function does the following preprocessing:
+    - remove the part of the string before and containing the colon
+    - remove punctuation
+    - remove urls and replace by URLHERE
+    - remove mentions and replace by MENTIONHERE
+    - tokenize and remove stopwords
+    - lemmatize words
+    - remove empty tokens and spaces
+    - join the tokens together, separated by spaces
+    - if a corrector is given, the corrector is applied to every tweet after the
+      previous operations are applied
+
+    It uses preprocess_str on rows
+
+    Parameters
+    ----------
+    row: pd.Series
+        The row in a dataframe to process
+    lemmatizer: WordNetLemmatizer
+        The lemmatizer used to lemmatize
+    stopwords: list[str]
+        List of english stopwords
+    corrector: Optional[Callable[[str], str]]
+        Callable applied to the text
+    """
+
+    text = row.tweet
+    text = preprocess_str(text, lemmatizer, stopwords, corrector)
 
     return text
 
@@ -131,7 +165,7 @@ def write_cleaned_data(
     corrector: Optional[Callable[[str], str]] = spellcheck_corrector,
 ):
     """Cleans the dataframe loaded at `src` and writes the cleaned dataframe to disk
-    `dest`. It keeps 
+    `dest`.
     Parameters:
     ----------
     src: str
