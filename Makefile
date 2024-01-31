@@ -8,5 +8,8 @@ cleandfnocorrect: preprocessing/data_processing.py
 profile: eda/profiling.py
 	python3 -m eda.profiling
 
+st: web_app.py
+	streamlit run web_app.py
+
 test: tests
 	python3 -m pytest -rP
